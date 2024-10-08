@@ -1,0 +1,30 @@
+name: Check Branch Name and Delete Invalid Branch
+
+on:
+  push:
+    branches:
+      - "*"
+
+permissions:
+  contents: write
+
+jobs:
+  check-branch-name:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Check branch name
+        env:
+          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+          REPOSITORY_NAME: ${{ github.repository }}
+          REPOSITORY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [[ ! "$BRANCH_NAME" == "main" && ! "$BRANCH_NAME" == "dev" && ! "$BRANCH_NAME" =~ ^(fix|feature|release|hotfix)\/[a-z0-9\-]+$ ]]
+          then
+            curl -X DELETE -H "Authorization: token $REPOSITORY_TOKEN" https://api.github.com/repos/$REPOSITORY_NAME/git/refs/heads/$BRANCH_NAME
+            echo "The branch '$BRANCH_NAME' has been deleted from the repository for not following the naming convention."
+            exit 1
+          fi
